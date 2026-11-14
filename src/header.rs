@@ -9,7 +9,7 @@ pub struct Header {
 }
 
 impl Header {
-    fn from_bytes(bytes: [u8; 4]) -> Header {
+    pub fn from_bytes(bytes: [u8; 4]) -> Header {
         let raw = u32::from_be_bytes(bytes);
 
         Header {
@@ -22,7 +22,7 @@ impl Header {
         }
     }
 
-    fn to_bytes(&self) -> [u8; 4] {
+    pub fn to_bytes(&self) -> [u8; 4] {
         let raw = ((self.priority as u32 & 0x03) << 30)
             | ((self.source as u32 & 0x1F) << 25)
             | ((self.destination as u32 & 0x1F) << 20)
