@@ -35,7 +35,11 @@ impl<const N: usize, const MTU: usize> Pool<N, MTU> {
         None
     }
 
-    pub fn release(&mut self) {}
+    pub fn release(&mut self, index: BufferIndex) {
+        debug_assert!(self.slots[index.0].occupied, "double release detected");
+        self.slots[index.0].occupied = false;
+        self.slots[index.0].len = 0;
+    }
 }
 
 #[cfg(test)]
@@ -73,5 +77,31 @@ mod tests {
 
         let out_of_memory = pool.allocate();
         assert_eq!(out_of_memory, None);
+
+        pool.release(BufferIndex(1));
+
+        assert!(pool.slots[0].occupied);
+        assert!(!pool.slots[1].occupied);
+        assert!(pool.slots[2].occupied);
+
+        pool.release(BufferIndex(0));
+        pool.release(BufferIndex(2));
+
+        assert!(!pool.slots[0].occupied);
+        assert!(!pool.slots[1].occupied);
+        assert!(!pool.slots[2].occupied);
+
+        let first = pool.allocate();
+
+        assert!(pool.slots[0].occupied);
+        assert!(!pool.slots[1].occupied);
+        assert!(!pool.slots[2].occupied);
+        assert_eq!(first, Some(BufferIndex(0)));
+
+        pool.release(BufferIndex(0));
+
+        assert!(!pool.slots[0].occupied);
+        assert!(!pool.slots[1].occupied);
+        assert!(!pool.slots[2].occupied);
     }
 }
