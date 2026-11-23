@@ -40,6 +40,23 @@ impl<const N: usize, const MTU: usize> Pool<N, MTU> {
         self.slots[index.0].occupied = false;
         self.slots[index.0].len = 0;
     }
+
+    pub fn read(&self, index: &BufferIndex) -> &[u8] {
+        let slot = &self.slots[index.0];
+
+        &slot.buffer[..slot.len]
+    }
+
+    pub fn write(&mut self, index: &BufferIndex, data: &[u8]) -> Result<(), ()> {
+        if data.len() > MTU {
+            return Err(());
+        }
+
+        self.slots[index.0].buffer[..data.len()].copy_from_slice(data);
+        self.slots[index.0].len = data.len();
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -103,5 +120,30 @@ mod tests {
         assert!(!pool.slots[0].occupied);
         assert!(!pool.slots[1].occupied);
         assert!(!pool.slots[2].occupied);
+    }
+
+    #[test]
+    fn test_successful_write() {
+        let mut pool: Pool<3, 8> = Pool::new();
+        let index = pool.allocate().unwrap();
+
+        let data = [2, 0, 0, 4];
+
+        let _ = pool.write(&index, &data);
+
+        assert_eq!(pool.slots[0].len, 4);
+
+        assert_eq!(pool.read(&index), data);
+    }
+
+    #[test]
+    fn test_write_with_too_big_data() {
+        let mut pool: Pool<3, 3> = Pool::new();
+        let index = pool.allocate().unwrap();
+        let data = [2, 0, 0, 4];
+
+        assert!(pool.write(&index, &data).is_err());
+
+        assert_eq!(pool.slots[0].len, 0);
     }
 }
